@@ -6,11 +6,8 @@ from google.oauth2.service_account import Credentials
 from pydantic import BaseModel
 from datetime import datetime
 import pandas as pd
-from dotenv import load_dotenv
 import os
 import json
-
-load_dotenv()
 
 app = FastAPI()
 
