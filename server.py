@@ -6,8 +6,11 @@ from google.oauth2.service_account import Credentials
 from pydantic import BaseModel
 from datetime import datetime
 import pandas as pd
+from dotenv import load_dotenv
 import os
 import json
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -27,10 +30,20 @@ def index(tracker_id: str):
     row_indices = sheet_df.index[sheet_df["Pixel ID"] == tracker_id].tolist()
     if row_indices:
         row_index = row_indices[0]
+
+        createdAt = datetime.strptime(
+            sheet_df.at[row_index, "Created At"], "%Y-%m-%d %H:%M:%S"
+        )
+        time_diff = datetime.utcnow() - createdAt
+
         sheet_df.at[row_index, "Reads"] += 1
         sheet_df.at[row_index, "Status"] = (
             "Read" if sheet_df.at[row_index, "Reads"] > 0 else "Sent"
         )
+
+        if time_diff.total_seconds() < 5:
+            sheet_df.at[row_index, "Google Read"] = "True"
+
         sheet_df.fillna("", inplace=True)
         sheet.update([sheet_df.columns.values.tolist()] + sheet_df.values.tolist())
 
@@ -64,6 +77,7 @@ async def track_pixel(request: EmailRequest):
         "Email": email,
         "Status": "Sent",
         "Reads": 0,
+        "Google Read": "False",
         "Created At": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
     }
     sheet = client.open_by_key("1LqMXuRoU8uljeM5MeZkrnVN1rmzNqUh2h1hUhkNsKKQ").sheet1
